@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gacha Game WebSocket Test Client</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .status.connected {
+            background: #10b981;
+        }
+
+        .status.disconnected {
+            background: #ef4444;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 30px;
+        }
+
+        .panel {
+            background: #f9fafb;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .panel h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .connection-section {
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        button.danger {
+            background: #ef4444;
+        }
+
+        button.danger:hover {
+            background: #dc2626;
+        }
+
+        button.success {
+            background: #10b981;
+        }
+
+        button.success:hover {
+            background: #059669;
+        }
+
+        .user-info {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 2px solid #667eea;
+        }
+
+        .user-info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .user-info-item:last-child {
+            border-bottom: none;
+        }
+
+        .user-info-label {
+            font-weight: 600;
+            color: #6b7280;
+        }
+
+        .user-info-value {
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .log-container {
+            background: #1f2937;
+            border-radius: 8px;
+            padding: 15px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .log-entry {
+            padding: 5px;
+            margin: 2px 0;
+            border-radius: 4px;
+        }
+
+        .log-entry.sent {
+            color: #60a5fa;
+        }
+
+        .log-entry.received {
+            color: #34d399;
+        }
+
+        .log-entry.error {
+            color: #f87171;
+        }
+
+        .log-entry.info {
+            color: #a78bfa;
+        }
+
+        .timestamp {
+            color: #9ca3af;
+            font-size: 11px;
+            margin-right: 8px;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .result-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .character-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .character-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .character-card.rarity-5 {
+            border: 3px solid #fbbf24;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        }
+
+        .character-card.rarity-4 {
+            border: 3px solid #a78bfa;
+            background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+        }
+
+        .character-card.rarity-3 {
+            border: 3px solid #9ca3af;
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+        }
+
+        .character-name {
+            font-weight: bold;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        .character-rarity {
+            color: #6b7280;
+            font-size: 20px;
+        }
+
+        .new-badge {
+            background: #ef4444;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-top: 5px;
+            display: inline-block;
+        }
+
+        .clear-log {
+            background: #6b7280;
+            padding: 8px 16px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 Gacha Game WebSocket Tester</h1>
+            <div class="status disconnected" id="status">Disconnected</div>
+        </div>
+
+        <div class="content">
+            <!-- Left Panel: Connection & Controls -->
+            <div class="panel">
+                <h2>🔌 Connection</h2>
+                <div class="connection-section">
+                    <div class="input-group">
+                        <label for="wsUrl">WebSocket URL</label>
+                        <input type="text" id="wsUrl" value="ws://localhost:8080/ws" placeholder="ws://localhost:8080/ws">
+                    </div>
+                    <button id="connectBtn" onclick="connect()">Connect</button>
+                    <button id="disconnectBtn" onclick="disconnect()" disabled class="danger">Disconnect</button>
+                </div>
+
+                <h2>👤 User Info</h2>
+                <div class="user-info" id="userInfo">
+                    <div class="user-info-item">
+                        <span class="user-info-label">Currency:</span>
+                        <span class="user-info-value" id="currency">-</span>
+                    </div>
+                    <div class="user-info-item">
+                        <span class="user-info-label">Pity Count:</span>
+                        <span class="user-info-value" id="pityCount">-</span>
+                    </div>
+                </div>
+
+                <h2>🎲 Actions</h2>
+                <div class="button-grid">
+                    <button onclick="singlePull()" id="singlePullBtn" disabled>Single Pull (160)</button>
+                    <button onclick="tenPull()" id="tenPullBtn" disabled>Ten Pull (1600)</button>
+                    <button onclick="addCurrency()" id="addCurrencyBtn" disabled class="success">Add 10000 Currency</button>
+                    <button onclick="getUserInfo()" id="userInfoBtn" disabled>Refresh Info</button>
+                    <button onclick="getInventory()" id="inventoryBtn" disabled>Get Inventory</button>
+                    <button onclick="getPool()" id="poolBtn" disabled>Get Pool Info</button>
+                </div>
+
+                <h2>📦 Last Result</h2>
+                <div class="result-cards" id="resultCards"></div>
+            </div>
+
+            <!-- Right Panel: Logs -->
+            <div class="panel">
+                <h2>📜 Console Logs</h2>
+                <button class="clear-log" onclick="clearLog()">Clear Logs</button>
+                <div class="log-container" id="logContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let isConnected = false;
+
+        function getTimestamp() {
+            const now = new Date();
+            return now.toLocaleTimeString() + '.' + now.getMilliseconds();
+        }
+
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `<span class="timestamp">[${getTimestamp()}]</span>${message}`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('logContainer').innerHTML = '';
+            log('Logs cleared', 'info');
+        }
+
+        function updateStatus(connected) {
+            isConnected = connected;
+            const statusEl = document.getElementById('status');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            const actionButtons = ['singlePullBtn', 'tenPullBtn', 'addCurrencyBtn', 'userInfoBtn', 'inventoryBtn', 'poolBtn'];
+
+            if (connected) {
+                statusEl.textContent = 'Connected';
+                statusEl.className = 'status connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                actionButtons.forEach(id => document.getElementById(id).disabled = false);
+            } else {
+                statusEl.textContent = 'Disconnected';
+                statusEl.className = 'status disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                actionButtons.forEach(id => document.getElementById(id).disabled = true);
+            }
+        }
+
+        function connect() {
+            const url = document.getElementById('wsUrl').value;
+            log(`Connecting to ${url}...`, 'info');
+
+            try {
+                ws = new WebSocket(url);
+
+                ws.onopen = () => {
+                    log('✅ WebSocket connected!', 'info');
+                    updateStatus(true);
+                    getUserInfo();
+                };
+
+                ws.onmessage = (event) => {
+                    log(`⬇️ Received: ${event.data}`, 'received');
+                    handleMessage(event.data);
+                };
+
+                ws.onerror = (error) => {
+                    log(`❌ WebSocket error: ${error}`, 'error');
+                };
+
+                ws.onclose = () => {
+                    log('🔌 WebSocket disconnected', 'info');
+                    updateStatus(false);
+                };
+            } catch (error) {
+                log(`❌ Connection failed: ${error.message}`, 'error');
+            }
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function sendMessage(type, data = null) {
+            if (!isConnected) {
+                log('❌ Not connected!', 'error');
+                return;
+            }
+
+            const message = {
+                type: type,
+                data: data ? JSON.stringify(data) : null
+            };
+
+            const jsonStr = JSON.stringify(message);
+            ws.send(jsonStr);
+            log(`⬆️ Sent: ${jsonStr}`, 'sent');
+        }
+
+        function handleMessage(data) {
+            try {
+                const message = JSON.parse(data);
+                
+                // Log the raw message for debugging
+                console.log('Received message:', message);
+
+                switch (message.type) {
+                    case 'user_info':
+                        // Check if data is already an object or needs parsing
+                        const userInfo = typeof message.data === 'string' 
+                            ? JSON.parse(message.data) 
+                            : message.data;
+                        document.getElementById('currency').textContent = userInfo.currency;
+                        document.getElementById('pityCount').textContent = userInfo.pityCount;
+                        log(`💰 User info updated: Currency=${userInfo.currency}, Pity=${userInfo.pityCount}`, 'info');
+                        break;
+
+                    case 'gacha_result':
+                        // Check if data is already an object or needs parsing
+                        const result = typeof message.data === 'string' 
+                            ? JSON.parse(message.data) 
+                            : message.data;
+                        displayGachaResult(result);
+                        getUserInfo(); // Refresh user info after gacha
+                        break;
+
+                    case 'currency_update':
+                        getUserInfo();
+                        break;
+
+                    case 'error':
+                        log(`❌ Error: ${message.error}`, 'error');
+                        break;
+
+                    case 'pool_info':
+                        // Check if data is already an object or needs parsing
+                        const poolInfo = typeof message.data === 'string' 
+                            ? JSON.parse(message.data) 
+                            : message.data;
+                        log(`📊 Pool Info: ${poolInfo.characters.length} characters`, 'info');
+                        log(`   Rates - SSR: ${poolInfo.rates.ssr}, SR: ${poolInfo.rates.sr}, R: ${poolInfo.rates.r}`, 'info');
+                        log(`   ${poolInfo.pitySystem}`, 'info');
+                        break;
+
+                    case 'inventory':
+                        // Check if data is already an object or needs parsing
+                        const inventory = typeof message.data === 'string' 
+                            ? JSON.parse(message.data) 
+                            : message.data;
+                        log(`📦 Inventory: ${inventory.count} characters`, 'info');
+                        break;
+
+                    case 'pong':
+                        log('🏓 Pong received', 'info');
+                        break;
+                        
+                    default:
+                        log(`⚠️ Unknown message type: ${message.type}`, 'info');
+                }
+            } catch (error) {
+                log(`❌ Parse error: ${error.message}`, 'error');
+                log(`   Raw data: ${data}`, 'error');
+                console.error('Full error:', error);
+                console.error('Raw data:', data);
+            }
+        }
+
+        function displayGachaResult(result) {
+            const container = document.getElementById('resultCards');
+            container.innerHTML = '';
+
+            result.characters.forEach((char, index) => {
+                const card = document.createElement('div');
+                card.className = `character-card rarity-${char.rarity}`;
+                
+                const stars = '★'.repeat(char.rarity);
+                const isNew = result.isNew[index];
+                
+                card.innerHTML = `
+                    <div class="character-rarity">${stars}</div>
+                    <div class="character-name">${char.name}</div>
+                    ${isNew ? '<span class="new-badge">NEW!</span>' : ''}
+                `;
+                
+                container.appendChild(card);
+            });
+
+            log(`🎊 Got ${result.characters.length} character(s)!`, 'info');
+        }
+
+        function singlePull() {
+            sendMessage('single_pull');
+        }
+
+        function tenPull() {
+            sendMessage('ten_pull');
+        }
+
+        function addCurrency() {
+            sendMessage('add_currency', { amount: 10000 });
+        }
+
+        function getUserInfo() {
+            sendMessage('get_user_info');
+        }
+
+        function getInventory() {
+            sendMessage('get_inventory');
+        }
+
+        function getPool() {
+            sendMessage('get_pool');
+        }
+
+        // Auto-scroll logs
+        const logContainer = document.getElementById('logContainer');
+        const observer = new MutationObserver(() => {
+            logContainer.scrollTop = logContainer.scrollHeight;
+        });
+        observer.observe(logContainer, { childList: true });
+
+        log('🚀 WebSocket Test Client Ready!', 'info');
+        log('👉 Enter WebSocket URL and click Connect', 'info');
+    </script>
+</body>
+</html>
