@@ -42,9 +42,9 @@ const (
 
 // WebSocketMessage represents a message sent over WebSocket
 type WebSocketMessage struct {
-	Type  string          `json:"type"`
-	Data  json.RawMessage `json:"data,omitempty"`
-	Error string          `json:"error,omitempty"`
+	Type  string `json:"type"`
+	Data  string `json:"data,omitempty"`
+	Error string `json:"error,omitempty"`
 }
 
 // WebSocketHandler handles WebSocket connections
@@ -187,10 +187,6 @@ func (h *WebSocketHandler) handleMessage(client *Client, message []byte) {
 
 	case TypeAddCurrency:
 		var req models.AddCurrencyRequest
-		if err := json.Unmarshal(msg.Data, &req); err != nil {
-			h.sendError(client, "Invalid currency request")
-			return
-		}
 		h.handleAddCurrency(client, req.Amount)
 
 	default:
@@ -334,7 +330,7 @@ func (h *WebSocketHandler) sendMessage(client *Client, msgType string, data inte
 			log.Printf("Failed to marshal data: %v", err)
 			return
 		}
-		msg.Data = jsonData
+		msg.Data = string(jsonData)
 	}
 
 	msgBytes, err := json.Marshal(msg)
